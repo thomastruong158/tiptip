@@ -99,11 +99,19 @@ export async function createStripeAccount(userId: string) {
 export async function getStripeDashboardLink(accountId: string) {
   console.log('➡️ [getStripeDashboardLink] Account:', accountId);
   try {
+    const account = await stripe.accounts.retrieve(accountId);
+    if (!account.details_submitted) {
+        return { error: 'Account setup incomplete', error_code: 'incomplete_onboarding' };
+    }
+
     const link = await stripe.accounts.createLoginLink(accountId);
     console.log('✅ [getStripeDashboardLink] Link created:', link.url);
     return { url: link.url };
   } catch (error: any) {
     console.error('❌ [getStripeDashboardLink] Error:', error.message);
+    if (error.message && error.message.includes('not completed onboarding')) {
+        return { error: 'Account setup incomplete', error_code: 'incomplete_onboarding' };
+    }
     return { error: error.message };
   }
 }

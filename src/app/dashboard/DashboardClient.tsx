@@ -36,7 +36,13 @@ export default function DashboardClient({ user }: { user: any }) {
             window.open(result.url, '_blank');
         } else {
             console.error('Dashboard link error:', result.error);
-            alert(result.error || 'Could not generate dashboard link');
+            if (result.error_code === 'incomplete_onboarding') {
+                if (confirm('Your account setup is incomplete. Would you like to finish setup now?')) {
+                    handleConnect();
+                }
+            } else {
+                alert(result.error || 'Could not generate dashboard link');
+            }
         }
     } catch (e) {
         console.error(e);
