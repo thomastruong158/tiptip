@@ -2,6 +2,23 @@
 
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
+import { headers } from "next/headers";
+
+async function getBaseUrl() {
+  if (process.env.NEXT_PUBLIC_BASE_URL) {
+    return process.env.NEXT_PUBLIC_BASE_URL;
+  }
+  
+  const headersList = await headers();
+  const host = headersList.get('host');
+  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
+  
+  if (host) {
+    return `${protocol}://${host}`;
+  }
+  
+  return 'http://localhost:3000';
+}
 
 // Mock Auth: In a real app, use Clerk/NextAuth to get the session.
 // For now, we'll create a user and return the ID.
@@ -81,7 +98,7 @@ export async function createStripeAccount(userId: string) {
 
 export async function getStripeOnboardingLink(accountId: string) {
   console.log('➡️ [getStripeOnboardingLink] Account:', accountId);
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const baseUrl = await getBaseUrl();
   
   try {
     const accountLink = await stripe.accountLinks.create({
@@ -127,7 +144,7 @@ export async function createCheckoutSession(recipientId: string, amountInCents: 
   
   console.log('ℹ️ [createCheckoutSession] Stripe Account ID:', recipient.stripeAccountId);
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const baseUrl = await getBaseUrl();
 
   try {
     const sessionParams: any = {

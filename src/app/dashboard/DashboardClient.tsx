@@ -22,7 +22,7 @@ export default function DashboardClient({ user }: { user: any }) {
       window.location.href = link;
     } catch (error) {
       console.error(error);
-      alert('Failed to connect Stripe');
+      alert('Failed to connect Stripe: ' + (error instanceof Error ? error.message : 'Unknown error'));
       setLoading(false);
     }
   }
