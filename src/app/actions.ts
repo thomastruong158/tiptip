@@ -57,61 +57,49 @@ export async function registerUser(formData: FormData) {
   return { success: true, userId: user.id };
 }
 
-export async function createStripeAccount(userId: string) {
-  console.log('➡️ [createStripeAccount] User:', userId);
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) {
-    console.error('❌ [createStripeAccount] User not found');
-    throw new Error('User not found');
-  }
-
-  if (user.stripeAccountId) {
-    console.log('✅ [createStripeAccount] Existing account:', user.stripeAccountId);
-    return { accountId: user.stripeAccountId };
-  }
-
-  let accountId;
-  try {
-    console.log('🔄 [createStripeAccount] Creating Stripe Express account...');
-    const account = await stripe.accounts.create({
-      type: 'express',
-      country: 'US', // Default to US for MVP
-      capabilities: {
-        card_payments: { requested: true },
-        transfers: { requested: true },
-      },
-    });
-    accountId = account.id;
-    console.log('✅ [createStripeAccount] Created account:', accountId);
-  } catch (error: any) {
-    console.error('❌ [createStripeAccount] Stripe Error:', error.message);
-    return { error: error.message };
-  }
-
-  await prisma.user.update({
-    where: { id: userId },
-    data: { stripeAccountId: accountId },
-  });
-
-  return { accountId };
-}
-
-export async function getStripeOnboardingLink(accountId: string) {
-  console.log('➡️ [getStripeOnboardingLink] Account:', accountId);
+export async function getStripeOAuthLink() {
+  console.log('➡️ [getStripeOAuthLink] Generating OAuth link');
   const baseUrl = await getBaseUrl();
   
+  if (!process.env.STRIPE_CLIENT_ID) {
+    console.error('❌ [getStripeOAuthLink] Missing STRIPE_CLIENT_ID');
+    return { error: 'Server configuration error: Missing STRIPE_CLIENT_ID' };
+  }
+
+  // https://stripe.com/docs/connect/oauth-reference
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: process.env.STRIPE_CLIENT_ID,
+    scope: 'read_write',
+    redirect_uri: `${baseUrl}/dashboard`,
+  });
+
+  const url = `https://connect.stripe.com/oauth/authorize?${params.toString()}`;
+  console.log('✅ [getStripeOAuthLink] Link generated:', url);
+  return { url };
+}
+
+export async function connectStripeAccount(code: string, userId: string) {
+  console.log('➡️ [connectStripeAccount] Connecting account with code for user:', userId);
+  
   try {
-    const accountLink = await stripe.accountLinks.create({
-      account: accountId,
-      refresh_url: `${baseUrl}/dashboard`, // Handle refresh (e.g. link expired)
-      return_url: `${baseUrl}/dashboard?connected=true`, // Handle success
-      type: 'account_onboarding',
+    const response = await stripe.oauth.token({
+      grant_type: 'authorization_code',
+      code,
     });
-    console.log('✅ [getStripeOnboardingLink] Link created:', accountLink.url);
-    return { url: accountLink.url };
+
+    const stripeAccountId = response.stripe_user_id;
+    console.log('✅ [connectStripeAccount] Connected account ID:', stripeAccountId);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { stripeAccountId },
+    });
+
+    return { success: true, accountId: stripeAccountId };
   } catch (error: any) {
-     console.error('❌ [getStripeOnboardingLink] Error:', error.message);
-     return { error: error.message };
+    console.error('❌ [connectStripeAccount] Error:', error.message);
+    return { error: error.message };
   }
 }
 
@@ -169,6 +157,8 @@ export async function createCheckoutSession(recipientId: string, amountInCents: 
       const session = await stripe.checkout.sessions.create({
         ...sessionParams,
         payment_intent_data: {
+          // For Standard accounts, you don't strictly need application_fee_amount if you just want to transfer
+          // But if you do charge a fee, the account must have the 'card_payments' capability enabled
           application_fee_amount: Math.round(amountInCents * 0.05), // 5% platform fee
           transfer_data: {
             destination: recipient.stripeAccountId,
@@ -179,12 +169,20 @@ export async function createCheckoutSession(recipientId: string, amountInCents: 
       console.log('✅ [createCheckoutSession] Session created:', session.url);
       return { url: session.url };
     } catch (error: any) {
-      // If we try to transfer to our own account (Platform account), Stripe throws an error.
-      // In this case, we just process it as a direct payment without transfer_data/application_fee.
+      // Handle "missing capabilities" specifically
+      if (error.message?.includes("missing the required capabilities")) {
+         console.warn('⚠️ [createCheckoutSession] Target account missing capabilities. Fallback to direct charge (no fee).');
+         
+         // Fallback: Create session WITHOUT transfer_data/application_fee (money goes to Platform, you pay them manually later)
+         // OR handle it gracefully. For now, we'll try to let the platform take the money to avoid crashing.
+         const session = await stripe.checkout.sessions.create(sessionParams);
+         return { url: session.url };
+      }
+      
+      // If we try to transfer to our own account (Platform account)
       if (error.message?.includes("cannot be set to your own account")) {
         console.warn('⚠️ [createCheckoutSession] Destination is platform account. Fallback to direct charge.');
         const session = await stripe.checkout.sessions.create(sessionParams);
-        console.log('✅ [createCheckoutSession] Session created (Direct):', session.url);
         return { url: session.url };
       }
       

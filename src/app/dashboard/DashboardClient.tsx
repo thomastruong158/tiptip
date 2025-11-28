@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { createStripeAccount, getStripeOnboardingLink } from '@/app/actions';
+import { getStripeOAuthLink } from '@/app/actions';
 import Link from 'next/link';
 import { QRCodeCanvas } from 'qrcode.react';
 
@@ -12,29 +12,16 @@ export default function DashboardClient({ user }: { user: any }) {
   async function handleConnect() {
     setLoading(true);
     try {
-      // 1. Ensure account exists
-      const accountResult = await createStripeAccount(user.id);
-      if (accountResult.error) {
-        throw new Error(accountResult.error);
+      const result = await getStripeOAuthLink();
+      if (result.error) {
+        throw new Error(result.error);
       }
-      const accountId = accountResult.accountId;
-
-      if (!accountId) {
-         throw new Error('Failed to create account ID');
-      }
-      
-      // 2. Get link
-      const linkResult = await getStripeOnboardingLink(accountId);
-      if (linkResult.error) {
-        throw new Error(linkResult.error);
-      }
-      const link = linkResult.url;
+      const link = result.url;
 
       if (!link) {
-        throw new Error('Failed to get onboarding link');
+        throw new Error('Failed to get Connect link');
       }
       
-      // 3. Redirect
       window.location.href = link;
     } catch (error) {
       console.error(error);
