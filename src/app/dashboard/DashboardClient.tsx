@@ -13,13 +13,13 @@ export default function DashboardClient({ user }: { user: any }) {
     setLoading(true);
     try {
       // 1. Ensure account exists
-      const result = await createStripeAccount(user.id);
+      const accountResult = await createStripeAccount(user.id);
       
       // 2. Get link
-      const link = await getStripeOnboardingLink(result.accountId);
+      const linkResult = await getStripeOnboardingLink(accountResult.accountId);
       
       // 3. Redirect
-      window.location.href = link;
+      window.location.href = linkResult.url;
     } catch (error) {
       console.error(error);
       alert('Failed to connect Stripe: ' + (error instanceof Error ? error.message : 'Unknown error'));
@@ -147,4 +147,3 @@ export default function DashboardClient({ user }: { user: any }) {
     </div>
   );
 }
-
