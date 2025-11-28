@@ -14,7 +14,12 @@ async function getBaseUrl() {
   const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
   
   if (host) {
-    return `${protocol}://${host}`;
+    // Check if host is localhost or starts with localhost:
+    const isLocalhost = host.includes('localhost') || host.startsWith('127.0.0.1');
+    if (isLocalhost) {
+        return `http://${host}`;
+    }
+    return `https://${host}`;
   }
   
   return 'http://localhost:3000';
@@ -75,7 +80,7 @@ export async function createStripeAccount(userId: string) {
     console.log('🔄 [createStripeAccount] Creating Stripe Express account...');
     const account = await stripe.accounts.create({
       type: 'express',
-      country: 'US', // Default to US for MVP
+      // country: 'US', // Default to US for MVP -- Commented out to allow user to select country
       capabilities: {
         card_payments: { requested: true },
         transfers: { requested: true },
@@ -195,6 +200,11 @@ export async function getUserByUsername(username: string) {
 
 export async function createCheckoutSession(recipientId: string, amountInCents: number) {
   console.log('➡️ [createCheckoutSession] Recipient:', recipientId, 'Amount:', amountInCents);
+  
+  if (amountInCents <= 0) {
+      return { error: 'Invalid amount' };
+  }
+
   const recipient = await prisma.user.findUnique({ where: { id: recipientId } });
   
   if (!recipient) {

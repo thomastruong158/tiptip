@@ -15,7 +15,11 @@ export default function TipPageClient({ user }: { user: any }) {
     setLoading(true);
     try {
       const finalAmount = customAmount ? parseFloat(customAmount) : amount;
-      if (!finalAmount || finalAmount <= 0) return;
+      if (!finalAmount || finalAmount <= 0) {
+        alert('Please enter a valid amount greater than $0');
+        setLoading(false);
+        return;
+      }
       
       const cents = Math.round(finalAmount * 100);
       const result = await createCheckoutSession(user.id, cents);
