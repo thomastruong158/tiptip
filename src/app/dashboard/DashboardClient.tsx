@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { createStripeAccount, getStripeOnboardingLink } from '@/app/actions';
 import Link from 'next/link';
+import { QRCodeCanvas } from 'qrcode.react';
 
 export default function DashboardClient({ user }: { user: any }) {
   const [loading, setLoading] = useState(false);
+  const qrRef = useRef<HTMLCanvasElement>(null);
 
   async function handleConnect() {
     setLoading(true);
@@ -24,6 +26,18 @@ export default function DashboardClient({ user }: { user: any }) {
       setLoading(false);
     }
   }
+
+  const downloadQRCode = () => {
+    if (!qrRef.current) return;
+    const canvas = qrRef.current;
+    const url = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `tiptip-${user.username}-qr.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Fallback if env not set, though it should be for production
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? '';
@@ -75,6 +89,18 @@ export default function DashboardClient({ user }: { user: any }) {
                 <div className="mb-4 p-4 bg-gray-50 rounded-lg break-all font-mono text-sm">
                   {fullUrl}
                 </div>
+                
+                {/* Hidden QR Code for generation */}
+                <div className="hidden">
+                  <QRCodeCanvas 
+                    ref={qrRef}
+                    value={fullUrl}
+                    size={512}
+                    level={"H"}
+                    includeMargin={true}
+                  />
+                </div>
+
                 <div className="flex gap-2">
                   <Link 
                     href={profilePath}
@@ -85,9 +111,7 @@ export default function DashboardClient({ user }: { user: any }) {
                   </Link>
                   <button 
                     className="flex-1 py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition"
-                    onClick={() => {
-                        alert('QR Code feature coming soon! (Use a library like qrcode.react)');
-                    }}
+                    onClick={downloadQRCode}
                   >
                     Download QR
                   </button>
