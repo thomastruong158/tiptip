@@ -15,13 +15,19 @@ export default function DashboardClient({ user }: { user: any }) {
     try {
       // 1. Ensure account exists
       const accountResult = await createStripeAccount(user.id);
+      if (accountResult.error || !accountResult.accountId) {
+          throw new Error(accountResult.error || 'Failed to create account');
+      }
       
       // 2. Get link
       const linkResult = await getStripeOnboardingLink(accountResult.accountId);
+      if (linkResult.error || !linkResult.url) {
+          throw new Error(linkResult.error || 'Failed to generate link');
+      }
       
       // 3. Redirect
       window.location.href = linkResult.url;
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       alert('Failed to connect Stripe: ' + (error instanceof Error ? error.message : 'Unknown error'));
       setLoading(false);

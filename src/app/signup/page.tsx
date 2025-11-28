@@ -17,6 +17,8 @@ export default function SignupPage() {
         localStorage.setItem('tiptip_userId', result.userId);
         document.cookie = `tiptip_userId=${result.userId}; path=/`;
         router.push('/dashboard');
+      } else if (result.error) {
+        alert(result.error);
       }
     } catch (error) {
       console.error(error);

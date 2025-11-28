@@ -36,30 +36,35 @@ export async function registerUser(formData: FormData) {
 
   if (!username || !email) {
     console.error('❌ [registerUser] Missing fields');
-    throw new Error('Missing fields');
+    return { error: 'Missing fields', success: false };
   }
+  
+  try {
+    // Check if user exists
+    const existing = await prisma.user.findFirst({
+      where: { OR: [{ email }, { username }] }
+    });
 
-  // Check if user exists
-  const existing = await prisma.user.findFirst({
-    where: { OR: [{ email }, { username }] }
-  });
-
-  if (existing) {
-    console.log('✅ [registerUser] User exists:', existing.id);
-    // For MVP demo, just return existing ID
-    return { success: true, userId: existing.id };
-  }
-
-  const user = await prisma.user.create({
-    data: {
-      username,
-      email,
-      name,
+    if (existing) {
+      console.log('✅ [registerUser] User exists:', existing.id);
+      // For MVP demo, just return existing ID
+      return { success: true, userId: existing.id };
     }
-  });
-  console.log('✅ [registerUser] Created new user:', user.id);
 
-  return { success: true, userId: user.id };
+    const user = await prisma.user.create({
+      data: {
+        username,
+        email,
+        name,
+      }
+    });
+    console.log('✅ [registerUser] Created new user:', user.id);
+
+    return { success: true, userId: user.id };
+  } catch (error: any) {
+    console.error('❌ [registerUser] Error:', error.message);
+    return { error: error.message || 'Failed to register user', success: false };
+  }
 }
 
 export async function createStripeAccount(userId: string) {
@@ -90,9 +95,9 @@ export async function createStripeAccount(userId: string) {
     console.log('✅ [createStripeAccount] Created account:', accountId);
   } catch (error: any) {
     console.error('❌ [createStripeAccount] Stripe Error:', error.message);
-    throw error;
+    return { error: error.message || 'Failed to create Stripe account' };
   }
-
+  
   await prisma.user.update({
     where: { id: userId },
     data: { stripeAccountId: accountId },
@@ -136,7 +141,7 @@ export async function getStripeOnboardingLink(accountId: string) {
     return { url: accountLink.url };
   } catch (error: any) {
      console.error('❌ [getStripeOnboardingLink] Error:', error.message);
-     throw error;
+     return { error: error.message || 'Failed to create onboarding link' };
   }
 }
 
