@@ -13,10 +13,26 @@ export default function DashboardClient({ user }: { user: any }) {
     setLoading(true);
     try {
       // 1. Ensure account exists
-      const result = await createStripeAccount(user.id);
+      const accountResult = await createStripeAccount(user.id);
+      if (accountResult.error) {
+        throw new Error(accountResult.error);
+      }
+      const accountId = accountResult.accountId;
+
+      if (!accountId) {
+         throw new Error('Failed to create account ID');
+      }
       
       // 2. Get link
-      const link = await getStripeOnboardingLink(result.accountId);
+      const linkResult = await getStripeOnboardingLink(accountId);
+      if (linkResult.error) {
+        throw new Error(linkResult.error);
+      }
+      const link = linkResult.url;
+
+      if (!link) {
+        throw new Error('Failed to get onboarding link');
+      }
       
       // 3. Redirect
       window.location.href = link;

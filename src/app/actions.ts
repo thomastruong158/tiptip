@@ -85,7 +85,7 @@ export async function createStripeAccount(userId: string) {
     console.log('✅ [createStripeAccount] Created account:', accountId);
   } catch (error: any) {
     console.error('❌ [createStripeAccount] Stripe Error:', error.message);
-    throw error;
+    return { error: error.message };
   }
 
   await prisma.user.update({
@@ -108,10 +108,10 @@ export async function getStripeOnboardingLink(accountId: string) {
       type: 'account_onboarding',
     });
     console.log('✅ [getStripeOnboardingLink] Link created:', accountLink.url);
-    return accountLink.url;
+    return { url: accountLink.url };
   } catch (error: any) {
      console.error('❌ [getStripeOnboardingLink] Error:', error.message);
-     throw error;
+     return { error: error.message };
   }
 }
 
