@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { createStripeAccount, getStripeOnboardingLink } from '@/app/actions';
+import { createStripeAccount, getStripeOnboardingLink, getStripeDashboardLink } from '@/app/actions';
 import Link from 'next/link';
 import { QRCodeCanvas } from 'qrcode.react';
 
@@ -24,6 +24,20 @@ export default function DashboardClient({ user }: { user: any }) {
       console.error(error);
       alert('Failed to connect Stripe: ' + (error instanceof Error ? error.message : 'Unknown error'));
       setLoading(false);
+    }
+  }
+
+  async function handleDashboardLogin() {
+    try {
+        const result = await getStripeDashboardLink(user.stripeAccountId);
+        if (result.url) {
+            window.open(result.url, '_blank');
+        } else {
+            alert('Could not generate dashboard link');
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Error opening dashboard');
     }
   }
 
@@ -62,7 +76,12 @@ export default function DashboardClient({ user }: { user: any }) {
                   ● Connected to Stripe
                 </div>
                 <p className="text-gray-600 mb-4">You are ready to receive payouts.</p>
-                <button className="text-blue-600 font-medium hover:underline">View Stripe Dashboard</button>
+                <button 
+                  onClick={handleDashboardLogin}
+                  className="text-blue-600 font-medium hover:underline"
+                >
+                  View Stripe Dashboard
+                </button>
               </div>
             ) : (
               <div>

@@ -96,6 +96,18 @@ export async function createStripeAccount(userId: string) {
   return { accountId };
 }
 
+export async function getStripeDashboardLink(accountId: string) {
+  console.log('➡️ [getStripeDashboardLink] Account:', accountId);
+  try {
+    const link = await stripe.accounts.createLoginLink(accountId);
+    console.log('✅ [getStripeDashboardLink] Link created:', link.url);
+    return { url: link.url };
+  } catch (error: any) {
+    console.error('❌ [getStripeDashboardLink] Error:', error.message);
+    return { error: error.message };
+  }
+}
+
 export async function getStripeOnboardingLink(accountId: string) {
   console.log('➡️ [getStripeOnboardingLink] Account:', accountId);
   const baseUrl = await getBaseUrl();
@@ -108,7 +120,7 @@ export async function getStripeOnboardingLink(accountId: string) {
       type: 'account_onboarding',
     });
     console.log('✅ [getStripeOnboardingLink] Link created:', accountLink.url);
-    return accountLink.url;
+    return { url: accountLink.url };
   } catch (error: any) {
      console.error('❌ [getStripeOnboardingLink] Error:', error.message);
      throw error;
