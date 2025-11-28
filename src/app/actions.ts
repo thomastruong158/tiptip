@@ -85,7 +85,7 @@ export async function createStripeAccount(userId: string) {
     console.log('🔄 [createStripeAccount] Creating Stripe Express account...');
     const account = await stripe.accounts.create({
       type: 'express',
-      // country: 'US', // Default to US for MVP -- Commented out to allow user to select country
+      // country: undefined, // Explicitly leave undefined to let user select
       capabilities: {
         card_payments: { requested: true },
         transfers: { requested: true },
