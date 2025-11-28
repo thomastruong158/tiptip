@@ -7,6 +7,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 
 export default function DashboardClient({ user }: { user: any }) {
   const [loading, setLoading] = useState(false);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
   const qrRef = useRef<HTMLCanvasElement>(null);
 
   async function handleConnect() {
@@ -28,16 +29,20 @@ export default function DashboardClient({ user }: { user: any }) {
   }
 
   async function handleDashboardLogin() {
+    setDashboardLoading(true);
     try {
         const result = await getStripeDashboardLink(user.stripeAccountId);
         if (result.url) {
             window.open(result.url, '_blank');
         } else {
-            alert('Could not generate dashboard link');
+            console.error('Dashboard link error:', result.error);
+            alert(result.error || 'Could not generate dashboard link');
         }
     } catch (e) {
         console.error(e);
         alert('Error opening dashboard');
+    } finally {
+        setDashboardLoading(false);
     }
   }
 
@@ -78,9 +83,10 @@ export default function DashboardClient({ user }: { user: any }) {
                 <p className="text-gray-600 mb-4">You are ready to receive payouts.</p>
                 <button 
                   onClick={handleDashboardLogin}
-                  className="text-blue-600 font-medium hover:underline"
+                  disabled={dashboardLoading}
+                  className="text-blue-600 font-medium hover:underline disabled:opacity-50 disabled:no-underline"
                 >
-                  View Stripe Dashboard
+                  {dashboardLoading ? 'Loading...' : 'View Stripe Dashboard'}
                 </button>
               </div>
             ) : (
