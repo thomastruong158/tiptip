@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  name      String?
+  avatarUrl String?
+  bio       String?
+  
+  stripeAccountId String? // The Connect Account ID (e.g. acct_12345)
+  chargesEnabled  Boolean @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  paymentsReceived Payment[]
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  amount    Int      // Amount in cents
+  currency  String   @default("usd")
+  status    String   // pending, succeeded, failed
+  
+  stripePaymentIntentId String? @unique
+  stripeSessionId       String? @unique
+  
+  recipientId String
+  recipient   User @relation(fields: [recipientId], references: [id])
+  
+  message   String? // Optional message from tipper
+  
+  createdAt DateTime @default(now())
+}
